@@ -22,6 +22,8 @@ go install
 
 #### Command Line Interface
 
+Before running the project, you should use a full screen console window.
+
 To run the project, if the gopath is setup, you can simply run the following command :
 
 ```
@@ -117,6 +119,8 @@ Restart your internet connection, alerts from google.com and httpstat.us/200 bei
 
 ### Possible improvements
 
+With more time on this project, I would have loved to work on the following improvmenents.
+
 #### Max Response Time
 
 If needed, it might be possible to improve the time performances in a trade-off with space complexity.
@@ -139,5 +143,9 @@ Timeout detection and invalid URL currently produce the same error (408).
 
 #### Unit tests
 
-With more time, I would have liked to follow a test driven devlopment.
-I only implemented a few tests for the `monitoring` module.
+With more time, a test driven devlopment could have been followed.
+A few tests were implemented for the `monitoring` module.
+
+#### Responsiveness
+
+Displaying the program require a full screen window. Some screen size may not be large enough.
