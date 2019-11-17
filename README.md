@@ -6,6 +6,12 @@ Webmonitor is a CLI web monitoring and alerting tool written in Go.
 
 ### Build the project
 
+To download the project, run
+
+```
+go get "github.com/hugo-sv/webmonitor"
+```
+
 From the project directory, run
 
 ```shell
