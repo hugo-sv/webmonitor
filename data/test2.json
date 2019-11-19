@@ -14,7 +14,7 @@
       "interval": 2
     },
     {
-      "url": "http://localhost:8080/alert1",
+      "url": "http://localhost:8080/alert",
       "interval": 2
     }
   ]
