@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math"
+	"strconv"
 	"time"
 
 	"github.com/hugo-sv/webmonitor/cli"
@@ -11,155 +12,129 @@ import (
 	"github.com/hugo-sv/webmonitor/statistics"
 )
 
-// CheckStats is a data structure to store results form the monitoring CheckWithTimeOut function
-type CheckStats struct {
-	url          string
-	responseTime int
-	StatusCode   int
-}
-
-// DisplayStats isolate the relevant Satistics to display them.
-func DisplayStats(urls []string, urlStatistics map[string][3]*statistics.Statistic, activeView int) {
-	// Setting up stats table headers
-	statsHeaders := []string{
-		"Website",
-		"Avg",
-		"Max",
-		"Availability",
-		"Codes",
-	}
-	Table := [][]string{statsHeaders}
-	// For each URL
-	var urlStatistic *statistics.Statistic
-	for _, url := range urls {
-		urlStatistic = urlStatistics[url][activeView]
-		// Append Statistics
-		Table = append(Table, []string{
-			display.Shorten(url),
-			fmt.Sprintf("%.0f", urlStatistic.Average()),
-			fmt.Sprintf("%v", urlStatistic.MaxResponseTime()),
-			fmt.Sprintf("%.0f%%", urlStatistic.Availability()*100.0),
-			display.StatusCodeMapToString(urlStatistic.StatusCodeCount()),
-		})
-	}
-	// Render the update table
-	display.RenderStatTable(Table)
-}
-
 func main() {
-	// Retrieving the command's flags
-	checkInterval, timeout, urls := cli.ParseFlags()
-	// Setting up the Statistics and alerts objects
-	AlertMessages := []string{}
-	AlertStartMessage := "[%v] Website %s is down. Availability : %.0f %%"
-	AlertEndMessage := "[%v] Website %s is up."
-
+	// Retrieving the cli command's flags
+	timeout, urls, intervals := cli.ParseFlags()
+	if len(urls) == 0 {
+		// There are no URL to track
+		return
+	}
+	// Channel messages
+	stop := make(chan struct{}, len(urls))
+	statsMessage := make(chan monitor.CheckStats)
+	// Setting up the Statistics system
 	urlStatistics := make(map[string][3]*statistics.Statistic)
+	var checkInterval int
 	for _, url := range urls {
-		// Keeping track of Statistics for 2min, 10min and 1h timeframes
+		checkInterval = intervals[url]
+		// Keeping track of enough records for 2min, 10min and 1h timeframes
 		urlStatistics[url] = [3]*statistics.Statistic{
 			statistics.NewStatistic(int(math.Ceil(float64(2*60) / float64(checkInterval)))),
 			statistics.NewStatistic(int(math.Ceil(float64(10*60) / float64(checkInterval)))),
 			statistics.NewStatistic(int(math.Ceil(float64(60*60) / float64(checkInterval)))),
 		}
+		// Starting a goroutine fetching data for this URL
+		go monitor.CheckOnTicks(url, checkInterval, timeout, stop, statsMessage)
 	}
-	// Fetch Ticker will trigger the Check
-	fetchTicker := time.NewTicker(time.Second * time.Duration(checkInterval))
-	defer fetchTicker.Stop()
-	// These Display tickers will trigger the display of stats for the past 10min and 1h respectively
+	// These Display tickers will refresh the stats display every 10sec and 1min for the past 10min and 1h respectively
 	displayTicker1 := time.NewTicker(time.Second * time.Duration(10))
 	defer displayTicker1.Stop()
 	displayTicker2 := time.NewTicker(time.Second * time.Duration(60))
 	defer displayTicker2.Stop()
-	// The user's active view
-	// 1 means the users have the past 10min stats displayed
-	// 2 means the users have the past 1h stats displayed
-	activeView := 1
 	// Setting up the UI display
+	uiView := display.View{
+		Urls:            urls,
+		URLStatistics:   urlStatistics,
+		TimeframeRepr:   map[int]string{0: "2min", 1: "10min", 2: "1h"},
+		ActiveWebsite:   0,
+		ActiveTimeframe: 1,
+		AlertMessages:   []string{},
+		AlertOffset:     0,
+	}
 	uiEvents := display.Init()
 	defer display.Close()
-	display.RenderLayout(activeView)
+	display.RenderLayout(uiView)
 	// Listening to tickers and UI Events ...
 	var previousAvailability, currentAvailability float64
-	var responseTime, StatusCode int
-	statsToDisplay := false
-	statsMessage := make(chan CheckStats)
 	for {
 		select {
-		// Check Ticker
-		case <-fetchTicker.C:
-			for _, url := range urls {
-				// Checking the website within a goroutine
-				go func(url string) {
-					responseTime, StatusCode := monitor.CheckWithTimeout(url, timeout)
-					statsMessage <- CheckStats{url, responseTime, StatusCode}
-				}(url)
-			}
 		// Catching the result of a Check operation
-		case Stats := <-statsMessage:
-			responseTime = Stats.responseTime
-			StatusCode = Stats.StatusCode
+		case stats := <-statsMessage:
 			// Pulling the previous availability
-			previousAvailability = urlStatistics[Stats.url][0].Availability()
-			for i, urlStatistic := range urlStatistics[Stats.url] {
+			previousAvailability = urlStatistics[stats.URL][0].Availability()
+			for i, urlStatistic := range urlStatistics[stats.URL] {
 				// Updating the records
-				urlStatistic.AddRecord(responseTime, StatusCode)
-				statsToDisplay = true
+				urlStatistic.AddRecord(stats.ResponseTime, stats.StatusCode)
 				// Handeling alerts with the 2 min timeframe stats
 				if i == 0 {
 					currentAvailability = urlStatistic.Availability()
 					// If 80% threshold is crossed, or website is unavailable from the start
 					if currentAvailability < 0.8 && (previousAvailability >= 0.8 || math.IsNaN(previousAvailability)) {
 						// Append the alert
-						AlertMessages = append(AlertMessages,
-							fmt.Sprintf(AlertStartMessage,
-								time.Now().Format(time.Kitchen),
-								display.Shorten(Stats.url),
+						uiView.AlertMessages = append(uiView.AlertMessages,
+							fmt.Sprintf("Website %s is down. availability=%.0f %%, time=%v",
+								display.Shorten(stats.URL),
 								currentAvailability*100.0,
+								time.Now().Format(time.Kitchen),
 							))
 						// Update the UI
-						display.RenderAlerts(AlertMessages)
+						go display.RenderAlerts(uiView)
 					}
 					// If availability is back above the 80% threshold
-					if currentAvailability > 0.8 && previousAvailability <= 0.8 {
+					if currentAvailability > 0.8 && previousAvailability < 0.8 {
 						// Append the alert
-						AlertMessages = append(AlertMessages,
-							fmt.Sprintf(AlertEndMessage,
+						uiView.AlertMessages = append(uiView.AlertMessages,
+							fmt.Sprintf("Website %s is up, time=%v",
+								display.Shorten(stats.URL),
 								time.Now().Format(time.Kitchen),
-								display.Shorten(Stats.url),
 							))
 						// Update the UI
-						display.RenderAlerts(AlertMessages)
+						go display.RenderAlerts(uiView)
 					}
 				}
 			}
 		// 10 min display Ticker
 		case <-displayTicker1.C:
-			if activeView == 1 {
-				DisplayStats(urls, urlStatistics, activeView)
+			if uiView.ActiveTimeframe == 1 {
+				go display.RenderStats(uiView)
 			}
 		// 1 h display Ticker
 		case <-displayTicker2.C:
-			if activeView == 2 {
-				DisplayStats(urls, urlStatistics, activeView)
+			if uiView.ActiveTimeframe == 2 {
+				go display.RenderStats(uiView)
 			}
 		// UI events
 		case e := <-uiEvents:
 			switch e.ID {
 			case "q", "<C-c>":
-				return
-			case "c":
-				// Clearing the alerts
-				AlertMessages = []string{}
-				display.RenderAlertsLayout()
-			case "s":
-				// Switching the active view
-				activeView = 3 - activeView
-				display.RenderStatisticsLayout(activeView)
-				if statsToDisplay {
-					// Displaying stats table if and only if there are data to display
-					DisplayStats(urls, urlStatistics, activeView)
+				// Sending as many stop messages as there are Fetch goroutines running
+				for range urls {
+					stop <- struct{}{}
 				}
+				return
+			case "<Up>":
+				// Scrolling up
+				if uiView.AlertOffset > 0 {
+					uiView.AlertOffset--
+				}
+				go display.RenderAlerts(uiView)
+			case "<Down>":
+				// Scrolling down
+				if uiView.AlertOffset < len(uiView.AlertMessages)-1 {
+					uiView.AlertOffset++
+				}
+				go display.RenderAlerts(uiView)
+			case "s":
+				// Switching the active view between 1 and 2
+				uiView.ActiveTimeframe = 3 - uiView.ActiveTimeframe
+				go display.RenderStats(uiView)
+			}
+			// If the pressed key is a number within the nuber of websites' range
+			v, err := strconv.Atoi(e.ID)
+			if err == nil && v < len(urls) {
+				uiView.ActiveWebsite = v
+				// Updating Statistics layout and views
+				go display.RenderStats(uiView)
 			}
 		}
 	}

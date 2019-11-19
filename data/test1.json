@@ -1,0 +1,21 @@
+{
+  "timeout": 10,
+  "websites": [
+    {
+      "url": "https://google.com",
+      "interval": 5
+    },
+    {
+      "url": "https://httpstat.us/400",
+      "interval": 5
+    },
+    {
+      "url": "https://httpstat.us/200",
+      "interval": 3
+    },
+    {
+      "url": "https://httpstat.us/200?sleep=9750",
+      "interval": 10
+    }
+  ]
+}

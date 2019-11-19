@@ -1,0 +1,21 @@
+{
+  "timeout": 5,
+  "websites": [
+    {
+      "url": "http://localhost:8080/up",
+      "interval": 2
+    },
+    {
+      "url": "http://localhost:8080/down",
+      "interval": 2
+    },
+    {
+      "url": "http://localhost:8080/random",
+      "interval": 2
+    },
+    {
+      "url": "http://localhost:8080/alert1",
+      "interval": 2
+    }
+  ]
+}
