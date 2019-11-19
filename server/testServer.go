@@ -34,7 +34,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	// This route should availability over 2 min varies from 100% to 60%
-	case "alert1":
+	case "alert":
 		if time.Now().Unix()%168 < 48 {
 			ServerDown(w)
 			return

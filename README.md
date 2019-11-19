@@ -27,35 +27,78 @@ Before running the project, you should use a full screen console window.
 To run the project, if the gopath is setup, you can simply run the following command :
 
 ```
-webmonitor [options] [URL]...
+webmonitor [options] [JSON path]
 ```
 
 Otherwise, `webmonitor` can be replaced by `go run main.go` from the project directory.
 
+```
+go run main.go [options] [JSON path]
+```
+
 #### Options
 
 ```
--interval INT (default : 5)
-    Interval (in seconds) at which to check the websites
--timeout INT (default : 10)
-    Timeout (in seconds) for http requests
+-ui BOOL (default : true)
+    Whether or not to display the UI
 ```
+
+`JSON path` Is the relative path to the configuration file. Some example configuration paths are located in the `data` folder.
 
 #### Examples
 
+From the project directory :
+
 ```shell
-webmonitor -interval=5 -timeout=10 "https://www.google.com" "https://httpstat.us/300" "https://httpstat.us/200?sleep=120" "https://httpstat.us/200?sleep=10000"
+webmonitor "data/test1.json"
+```
+
+Or, without UI.
+
+```shell
+webmonitor -ui=false "data/test1.json"
+```
+
+You can as well use custom JSON files. The format is
+
+```json
+{
+  "timeout": 5, // Timeout limit for get requests, in seconds
+  "websites": [
+    {
+      "url": "https://google.com",
+      "interval": 2 // Interval check, in seconds
+    },
+    ...
+  ]
+}
 ```
 
 #### User Interface
 
-You can press :
+With the UI, you can press :
 
 - q to quit
-- c to clear alerts
+- UP and DOWN to scroll throught alerts
 - s to switch the statistics timeframe
+- Any website ID's key, to view it details
 
 #### Usage
+
+In the `server` forlder, there is a go script that can be built and run in another window by using
+
+```shell
+cd server
+go build testServer.go
+testServer
+```
+
+It will serve a local server answering to request to http://localhost:8080/. The `test2.json` contain all the relevant routes :
+
+- **up** : Always return 200 status code
+- **down** : Always return 500 status code
+- **random** : Returns 200 status code with a 80% chance, 500 status code otherwise
+- **alert** : Return 200 status code for 120sec then 500 status code for 42sec, making an availability varying from 60% to 100% every two minutes
 
 The API `https://httpstat.us/{statusCode}?sleep={sleepTime}` can be use to test any response code and response time.
 
@@ -67,15 +110,15 @@ Disabling internet connection may as well emulate a website going down.
 
 In the `main` function, using go channels and tickers, operations are executed as they go. Usually :
 
-- Every `interval` seconds, each websites' stats are requested. If, in a **2 min** timeframe, an alert is triggered, it is added in the UI.
+- Each website, at each of their `interval` seconds, are requested. A response time and a status code will be returned later.
+- Each time a response time and a status code is returned, it is processed. If, in a **2 min** timeframe, an alert is triggered, it is added in the UI.
 - Every **10 sec**, the stats view is refreshed if the user is looking at a **10 min** timeframe.
 - Every **1 min**, the stats view is refreshed if the user is looking at a **1h** timeframe.
 - Every time a UI input is detected, the associated action is executed.
-- Every time requested website's stats are recieved, they are processed.
 
 ### CLI
 
-The `cli` module process the flags from the commande executed.
+The `cli` module process the flags from the commande executed, parse and check the JSON file.
 
 ### Display
 
@@ -89,6 +132,8 @@ The `display` module handles every UI related actions :
 
 The `monitor` module handles the HTTP get request, and compute a response time.
 
+It launches and stop goroutines that periodically Fetch and send back data.
+
 ### Statistics
 
 The `statistic` module compute the main statistics form the records of status code and response time in the considered timeframe :
@@ -99,21 +144,29 @@ The `statistic` module compute the main statistics form the records of status co
 
 ## Alerting logic test
 
-Run
+Run the `testServer` script.
 
 ```shell
-webmonitor -interval=2 -timeout=5 "https://www.google.com" "https://httpstat.us/400" "https://httpstat.us/200" "https://httpstat.us/200?sleep=10000"
+cd server
+testServer
 ```
 
-As the program starts, two alerts should be raised :
+Run the webmonitor app with `test2.json`
 
-- httpstat.us/400, not returning a 200 status code
-- httpstat.us/200?sleep=10000, triggering timeouts
+```shell
+webmonitor "test2.json"
+```
 
-Once the alerts are raised, stop your internet connection.
-After less than 30 seconds, alerts should be raised from every websites.
+As the program starts, one alerts should be raised :
 
-Restart your internet connection, alerts from google.com and httpstat.us/200 being up again should be raised within 2 min.
+- localhost:8080/down route, not returning a 200 status code
+
+As the program goes :
+
+- localhost:8080/random may will randomly go up and down.
+- localhost:8080/alert will go up and down every two minutes
+
+Stopping the server will also trigger 404 status error, as it is unreachable.
 
 ## Notes
 
@@ -123,23 +176,15 @@ With more time on this project, I would have loved to work on the following impr
 
 #### Max Response Time
 
-If needed, it might be possible to improve the time performances in a trade-off with space complexity.
+If needed, it might be possible to improve the time performances in a trade-off with space complexity using a segment tree.
 
 #### Tickers start time
 
-Tickers currently start too late in this project. With a 10 sec interval, the user has to wait for 10 sec before the websites are requested. It might be possible to force an early stard of the FetchTicker.
+Tickers currently start too late in this project. With a 10 sec interval, the user has to wait for 10 sec before the websites are requested.
 
 #### Alert system
 
 The alert system could be ugraded, so that active alerts are highlighted, with data on their duration and an updated availability.
-
-#### Status Code
-
-For a given Website, displaying the status code repartiion with a pie chart might make the information more readable.
-
-#### Timeout managment
-
-Timeout detection and invalid URL currently produce the same error (408).
 
 #### Unit tests
 
