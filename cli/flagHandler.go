@@ -21,11 +21,13 @@ type Website struct {
 }
 
 // ParseFlags parse and returns the flags of the webmonitor cli command : Websites, Check interval, and timeout
-func ParseFlags() (int, []string, map[string]int) {
+func ParseFlags() (int, []string, map[string]int, bool) {
+	var uiEnabled bool
+	flag.BoolVar(&uiEnabled, "ui", true, "Display app with a ui")
 	flag.Parse()
 	if len(flag.Args()) < 1 {
 		fmt.Println("No JSON input file path specified")
-		return 0, make([]string, 0), make(map[string]int)
+		return 0, make([]string, 0), make(map[string]int), false
 	}
 	jsonpath := flag.Args()[0]
 	// Open the file
@@ -33,7 +35,7 @@ func ParseFlags() (int, []string, map[string]int) {
 	if err != nil {
 		// Handle error
 		fmt.Println(err)
-		return 0, make([]string, 0), make(map[string]int)
+		return 0, make([]string, 0), make(map[string]int), false
 	}
 	defer jsonFile.Close()
 	// Read the Json
@@ -54,8 +56,8 @@ func ParseFlags() (int, []string, map[string]int) {
 	// If timeout invalid
 	if input.Timeout <= 1 {
 		fmt.Println("Timeout specified in JSON should be an integer greater than 1")
-		return 0, make([]string, 0), make(map[string]int)
+		return 0, make([]string, 0), make(map[string]int), false
 	}
 
-	return input.Timeout, urls, intervals
+	return input.Timeout, urls, intervals, uiEnabled
 }

@@ -14,6 +14,7 @@ import (
 
 // View is a Structure containing all relevant informatiosn to display the UI
 type View struct {
+	UIEnabled bool
 	// Monitored URLS
 	Urls []string
 	// Associated Statistics
@@ -31,7 +32,11 @@ type View struct {
 }
 
 // Init initialize the UI
-func Init() <-chan termui.Event {
+func Init(uiView View) <-chan termui.Event {
+	if !uiView.UIEnabled {
+		InitNoUI(uiView)
+		return nil
+	}
 	if err := ui.Init(); err != nil {
 		log.Fatalf("failed to initialize termui: %v", err)
 	}
@@ -39,12 +44,18 @@ func Init() <-chan termui.Event {
 }
 
 // Close Closes the UI
-func Close() {
+func Close(uiView View) {
+	if !uiView.UIEnabled {
+		return
+	}
 	ui.Close()
 }
 
 // RenderLayout renders the UI Layout
 func RenderLayout(uiView View) {
+	if !uiView.UIEnabled {
+		return
+	}
 	p := widgets.NewParagraph()
 	p.Title = " Webmonitor "
 	p.Text = "Website monitoring tool. Press q to quit."
@@ -78,7 +89,7 @@ func renderStatisticsLayout(uiView View) {
 	p1.BorderStyle.Fg = ui.ColorCyan
 
 	p2 := widgets.NewParagraph()
-	p2.Title = fmt.Sprintf(" Details %v ", uiView.ActiveWebsite)
+	p2.Title = fmt.Sprintf(" Details %v ", Shorten(uiView.Urls[uiView.ActiveWebsite]))
 	p2.Text = "Press a website's id to view details"
 	p2.TextStyle.Fg = ui.ColorYellow
 	p2.SetRect(0, 26, 75, 50)
@@ -98,6 +109,10 @@ func renderStatTable(Table [][]string) {
 
 // RenderAlerts renders a list of alert messages
 func RenderAlerts(uiView View) {
+	if !uiView.UIEnabled {
+		RenderAlertsNoUI(uiView)
+		return
+	}
 	p := widgets.NewParagraph()
 	p.Text = strings.Join(uiView.AlertMessages[uiView.AlertOffset:], "\n")
 	p.SetRect(75, 2, 150, 50)
@@ -106,7 +121,15 @@ func RenderAlerts(uiView View) {
 }
 
 // RenderStats isolate the relevant Satistics to display them.
-func RenderStats(uiView View) {
+func RenderStats(uiView View, timeframe int) {
+	if !uiView.UIEnabled {
+		RenderStatsNoUI(uiView, timeframe)
+		return
+	}
+	if timeframe != uiView.ActiveTimeframe {
+		// The updated timeframe is not to be updated
+		return
+	}
 	renderStatisticsLayout(uiView)
 
 	// Processing the general stats table headers
@@ -185,4 +208,31 @@ func renderStatDetails(uiView View, detailTable [][]string, plotValues []float64
 	lc.SetRect(1, 37, 75, 49)
 
 	ui.Render(g, lc)
+}
+
+// InitNoUI Initialise without UI
+func InitNoUI(uiView View) {
+	fmt.Println("Monitoring the URLS...")
+}
+
+// RenderStatsNoUI Render stats without UI
+func RenderStatsNoUI(uiView View, timeframe int) {
+	// Called at every refresh ticker,
+	fmt.Printf("Stats refreshed for %v timeframe :\n", uiView.TimeframeRepr[timeframe])
+	var urlStatistic *statistics.Statistic
+	for _, url := range uiView.Urls {
+		urlStatistic = uiView.URLStatistics[url][timeframe]
+		fmt.Printf("\tWebsite : %v\n", Shorten(url))
+		fmt.Printf("\t\tAverage : %.0f\n", urlStatistic.Average())
+		fmt.Printf("\t\tMax : %v\n", urlStatistic.MaxResponseTime())
+		fmt.Printf("\t\tAvailabiity : %.0f%%\n", urlStatistic.Availability()*100.0)
+		fmt.Println("\t\t" + StatusCodeMapToString(urlStatistic.StatusCodeCount))
+	}
+}
+
+// RenderAlertsNoUI RenderAlertswithout without UI
+func RenderAlertsNoUI(uiView View) {
+	// We only display the last alert
+	fmt.Println("Alert :")
+	fmt.Println("\t" + uiView.AlertMessages[len(uiView.AlertMessages)-1])
 }

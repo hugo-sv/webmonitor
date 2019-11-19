@@ -14,7 +14,7 @@ import (
 
 func main() {
 	// Retrieving the cli command's flags
-	timeout, urls, intervals := cli.ParseFlags()
+	timeout, urls, intervals, uiEnabled := cli.ParseFlags()
 	if len(urls) == 0 {
 		// There are no URL to track
 		return
@@ -43,6 +43,7 @@ func main() {
 	defer displayTicker2.Stop()
 	// Setting up the UI display
 	uiView := display.View{
+		UIEnabled:       uiEnabled,
 		Urls:            urls,
 		URLStatistics:   urlStatistics,
 		TimeframeRepr:   map[int]string{0: "2min", 1: "10min", 2: "1h"},
@@ -51,8 +52,8 @@ func main() {
 		AlertMessages:   []string{},
 		AlertOffset:     0,
 	}
-	uiEvents := display.Init()
-	defer display.Close()
+	uiEvents := display.Init(uiView)
+	defer display.Close(uiView)
 	display.RenderLayout(uiView)
 	// Listening to tickers and UI Events ...
 	var previousAvailability, currentAvailability float64
@@ -81,7 +82,7 @@ func main() {
 						go display.RenderAlerts(uiView)
 					}
 					// If availability is back above the 80% threshold
-					if currentAvailability > 0.8 && previousAvailability < 0.8 {
+					if currentAvailability >= 0.8 && previousAvailability < 0.8 {
 						// Append the alert
 						uiView.AlertMessages = append(uiView.AlertMessages,
 							fmt.Sprintf("Website %s is up, time=%v",
@@ -95,14 +96,10 @@ func main() {
 			}
 		// 10 min display Ticker
 		case <-displayTicker1.C:
-			if uiView.ActiveTimeframe == 1 {
-				go display.RenderStats(uiView)
-			}
+			go display.RenderStats(uiView, 1)
 		// 1 h display Ticker
 		case <-displayTicker2.C:
-			if uiView.ActiveTimeframe == 2 {
-				go display.RenderStats(uiView)
-			}
+			go display.RenderStats(uiView, 2)
 		// UI events
 		case e := <-uiEvents:
 			switch e.ID {
@@ -127,14 +124,14 @@ func main() {
 			case "s":
 				// Switching the active view between 1 and 2
 				uiView.ActiveTimeframe = 3 - uiView.ActiveTimeframe
-				go display.RenderStats(uiView)
+				go display.RenderStats(uiView, uiView.ActiveTimeframe)
 			}
 			// If the pressed key is a number within the nuber of websites' range
 			v, err := strconv.Atoi(e.ID)
 			if err == nil && v < len(urls) {
 				uiView.ActiveWebsite = v
 				// Updating Statistics layout and views
-				go display.RenderStats(uiView)
+				go display.RenderStats(uiView, uiView.ActiveTimeframe)
 			}
 		}
 	}
