@@ -24,6 +24,7 @@ func CheckWithTimeout(url string, timeout int) CheckStats {
 	responseTime := int(time.Now().Sub(t).Milliseconds())
 	// If there are no response, or a timeout
 	if err != nil {
+		// Using 408 to label no response or timeout issues
 		return CheckStats{url, responseTime, 408}
 	}
 	defer resp.Body.Close()
