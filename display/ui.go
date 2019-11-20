@@ -136,8 +136,8 @@ func RenderStats(uiView View, timeframe int) {
 	statsHeaders := []string{
 		"Id",
 		"Website",
-		"Avg",
-		"Max",
+		"Avg (ms)",
+		"Max (ms)",
 		"Availability",
 	}
 	Table := [][]string{statsHeaders}
@@ -163,8 +163,8 @@ func RenderStats(uiView View, timeframe int) {
 	detailedStatistics := uiView.URLStatistics[uiView.Urls[uiView.ActiveWebsite]]
 	detailedHeaders := []string{
 		"TimeFrame",
-		"Avg",
-		"Max",
+		"Avg (ms)",
+		"Max (ms)",
 		"Availability",
 		"Codes",
 	}
