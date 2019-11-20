@@ -1,6 +1,6 @@
 package statistics
 
-// Statistic is a structure containing informations on the last response times and status codes retrieved
+// Statistic is a structure containing information on the last response times and status codes retrieved
 type Statistic struct {
 	recentStats       evictingQueue
 	totalResponseTime int
@@ -43,7 +43,7 @@ func newEvictingQueue(size int) *evictingQueue {
 	return &evictingQueue{make([]item, size), size, 0, false}
 }
 
-// enqueue enqueu an element in the queue, and return the oldest element evicted
+// enqueue enqueue an element in the queue, and return the oldest element evicted
 func (q *evictingQueue) enqueue(i item) item {
 	// Update filled status
 	if !q.filled && q.selector == q.size-1 {
@@ -56,8 +56,8 @@ func (q *evictingQueue) enqueue(i item) item {
 	return previousItem
 }
 
-// lenght returns the lenght of an evictingQueue (size if the queue is filled)
-func (q *evictingQueue) lenght() int {
+// length returns the length of an evictingQueue (size if the queue is filled)
+func (q *evictingQueue) length() int {
 	if q.filled {
 		return q.size
 	}
@@ -82,25 +82,25 @@ func (s *Statistic) MaxResponseTime() int {
 
 // Average returns the responseTime average of a Statistic
 func (s *Statistic) Average() float64 {
-	return float64(s.totalResponseTime) / float64(s.recentStats.lenght())
+	return float64(s.totalResponseTime) / float64(s.recentStats.length())
 }
 
 // Availability returns the availability of a Statistic. A 1.0 availability means there are only 200 Status code responses.
 func (s *Statistic) Availability() float64 {
-	return float64(s.StatusCodeCount[200]) / float64(s.recentStats.lenght())
+	return float64(s.StatusCodeCount[200]) / float64(s.recentStats.length())
 }
 
-// lenght returns the lenght of an EvictingQueue (size if the queue is filled)
-func (s *Statistic) lenght() int {
-	return s.recentStats.lenght()
+// length returns the length of an EvictingQueue (size if the queue is filled)
+func (s *Statistic) length() int {
+	return s.recentStats.length()
 }
 
 // RecentResponseTime returns a list of the response time recorded as float64, starting from the most recent to the oldest.
 func (s *Statistic) RecentResponseTime() []float64 {
 	queue := s.recentStats
-	responseTimes := make([]float64, queue.lenght())
+	responseTimes := make([]float64, queue.length())
 	selector := queue.selector
-	for index := 0; index < queue.lenght(); index++ {
+	for index := 0; index < queue.length(); index++ {
 		responseTimes[index] = float64(queue.items[(queue.size+selector-index-1)%queue.size].ResponseTime)
 	}
 	return responseTimes

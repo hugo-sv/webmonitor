@@ -12,7 +12,7 @@ import (
 	"github.com/hugo-sv/webmonitor/statistics"
 )
 
-// View is a Structure containing all relevant informatiosn to display the UI
+// View is a Structure containing all relevant information to display the UI
 type View struct {
 	UIEnabled bool
 	// Monitored URLS
@@ -120,7 +120,7 @@ func RenderAlerts(uiView View) {
 	ui.Render(p)
 }
 
-// RenderStats isolate the relevant Satistics to display them.
+// RenderStats isolate the relevant Statistics to display them.
 func RenderStats(uiView View, timeframe int) {
 	if !uiView.UIEnabled {
 		RenderStatsNoUI(uiView, timeframe)
@@ -210,7 +210,7 @@ func renderStatDetails(uiView View, detailTable [][]string, plotValues []float64
 	ui.Render(g, lc)
 }
 
-// InitNoUI Initialise without UI
+// InitNoUI Initialize without UI
 func InitNoUI(uiView View) {
 	fmt.Println("Monitoring the URLS...")
 }
@@ -225,7 +225,7 @@ func RenderStatsNoUI(uiView View, timeframe int) {
 		fmt.Printf("\tWebsite : %v\n", Shorten(url))
 		fmt.Printf("\t\tAverage : %.0f\n", urlStatistic.Average())
 		fmt.Printf("\t\tMax : %v\n", urlStatistic.MaxResponseTime())
-		fmt.Printf("\t\tAvailabiity : %.0f%%\n", urlStatistic.Availability()*100.0)
+		fmt.Printf("\t\tAvailability : %.0f%%\n", urlStatistic.Availability()*100.0)
 		fmt.Println("\t\t" + StatusCodeMapToString(urlStatistic.StatusCodeCount))
 	}
 }

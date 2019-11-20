@@ -20,7 +20,7 @@ func ServerUp(w http.ResponseWriter) {
 
 // Handler handles HTTP requests on this server
 func Handler(w http.ResponseWriter, r *http.Request) {
-	// Adding a random reponse time
+	// Adding a random response time
 	time.Sleep(time.Second * time.Duration(rand.Float64()))
 	switch r.URL.Path[1:] {
 	// 0% availability

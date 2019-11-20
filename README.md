@@ -63,29 +63,30 @@ You can as well use custom JSON files. The format is
 
 ```json
 {
-  "timeout": 5, // Timeout limit for get requests, in seconds
+  "timeout": 5,
   "websites": [
     {
       "url": "https://google.com",
-      "interval": 2 // Interval check, in seconds
-    },
-    ...
+      "interval": 2
+    }
   ]
 }
 ```
+
+With `interval` being the website's interval check, in seconds, and `timeout` being the timeout limit for get requests, in seconds.
 
 #### User Interface
 
 With the UI, you can press :
 
-- q to quit
-- UP and DOWN to scroll throught alerts
-- s to switch the statistics timeframe
+- **q** to quit
+- **up** and **down** to scroll through alerts
+- **s** to switch the statistics timeframe
 - Any website ID's key, to view it details
 
 #### Usage
 
-In the `server` forlder, there is a go script that can be built and run in another window by using
+In the `server` folder, there is a go script that can be built and run in another window by using
 
 ```shell
 cd server
@@ -104,7 +105,7 @@ The API `https://httpstat.us/{statusCode}?sleep={sleepTime}` can be use to test 
 
 Disabling internet connection may as well emulate a website going down.
 
-## Project Archtecture
+## Project Architecture
 
 ### Main
 
@@ -118,7 +119,7 @@ In the `main` function, using go channels and tickers, operations are executed a
 
 ### CLI
 
-The `cli` module process the flags from the commande executed, parse and check the JSON file.
+The `cli` module process the flags from the command executed, parse and check the JSON file.
 
 ### Display
 
@@ -132,7 +133,7 @@ The `display` module handles every UI related actions :
 
 The `monitor` module handles the HTTP get request, and compute a response time.
 
-It launches and stop goroutines that periodically Fetch and send back data.
+It launches and stop goroutines that periodically fetch and send back data.
 
 ### Statistics
 
@@ -140,7 +141,7 @@ The `statistic` module compute the main statistics form the records of status co
 
 - **Max** : Maximal response time
 - **Avg** : Average response time
-- **Availability** : Percent of succesfull requests (Status code 200)
+- **Availability** : Percent of successful requests (Status code 200)
 
 ## Alerting logic test
 
@@ -163,7 +164,7 @@ As the program starts, one alerts should be raised :
 
 As the program goes :
 
-- localhost:8080/random may will randomly go up and down.
+- localhost:8080/random will randomly go up and down.
 - localhost:8080/alert will go up and down every two minutes
 
 Stopping the server will also trigger 404 status error, as it is unreachable.
@@ -172,9 +173,9 @@ Stopping the server will also trigger 404 status error, as it is unreachable.
 
 ### Possible improvements
 
-With more time on this project, I would have loved to work on the following improvmenents.
+With more time on this project, I would have loved to work on the following improvements.
 
-#### Max Response Time
+#### Computing Max Response Time
 
 If needed, it might be possible to improve the time performances in a trade-off with space complexity using a segment tree.
 
@@ -184,13 +185,14 @@ Tickers currently start too late in this project. With a 10 sec interval, the us
 
 #### Alert system
 
-The alert system could be ugraded, so that active alerts are highlighted, with data on their duration and an updated availability.
+The alert system could be upgraded, so that active alerts are highlighted, with data on their duration and an updated availability.
 
 #### Unit tests
 
-With more time, a test driven devlopment could have been followed.
+With more time, a test driven development could have been followed.
 A few tests were implemented for the `monitoring` module.
 
 #### Responsiveness
 
 Displaying the program require a full screen window. Some screen size may not be large enough.
+In case of issue, a non-UI mode is available, using the flag `ui=false`.

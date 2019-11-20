@@ -55,7 +55,7 @@ func main() {
 	uiEvents := display.Init(uiView)
 	defer display.Close(uiView)
 	display.RenderLayout(uiView)
-	// Listening to tickers and UI Events ...
+	// Listening to tickers and UI Events
 	var previousAvailability, currentAvailability float64
 	for {
 		select {
@@ -126,7 +126,7 @@ func main() {
 				uiView.ActiveTimeframe = 3 - uiView.ActiveTimeframe
 				go display.RenderStats(uiView, uiView.ActiveTimeframe)
 			}
-			// If the pressed key is a number within the nuber of websites' range
+			// If the pressed key is a number within the number of websites' range
 			v, err := strconv.Atoi(e.ID)
 			if err == nil && v < len(urls) {
 				uiView.ActiveWebsite = v

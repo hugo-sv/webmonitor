@@ -1,6 +1,8 @@
 package monitor
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestCheckStatusCode(t *testing.T) {
 	// Test if the proper status codes are returned
@@ -14,8 +16,10 @@ func TestCheckStatusCode(t *testing.T) {
 		{"https://httpstat.us/200?sleep=5100", 408},
 		{"https://jehbqkqbwelkjsd.com/", 408},
 	}
+	var statResult CheckStats
 	for _, c := range cases {
-		_, got := CheckWithTimeout(c.in, 5)
+		statResult = CheckWithTimeout(c.in, 5)
+		got := statResult.StatusCode
 		if got != c.want {
 			t.Errorf("Reverse(%q) == %v, want %v", c.in, got, c.want)
 		}
@@ -33,8 +37,10 @@ func TestCheckResponseTime(t *testing.T) {
 		{"https://httpstat.us/200?sleep=1000", 1000},
 		{"https://httpstat.us/200?sleep=10000", 5000},
 	}
+	var statResult CheckStats
 	for _, c := range cases {
-		got, _ := CheckWithTimeout(c.in, 5)
+		statResult = CheckWithTimeout(c.in, 5)
+		got := statResult.ResponseTime
 		if got < c.want {
 			t.Errorf("Reverse(%q) < %v, want %v", c.in, got, c.want)
 		}
