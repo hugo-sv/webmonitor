@@ -6,7 +6,7 @@
       "interval": 5
     },
     {
-      "url": "https://httpstat.us/400",
+      "url": "https://httpstat.us/500",
       "interval": 5
     },
     {
