@@ -167,7 +167,7 @@ As the program goes :
 - localhost:8080/random will randomly go up and down.
 - localhost:8080/alert will go up and down every two minutes
 
-Stopping the server will also trigger 404 status error, as it is unreachable.
+Stopping the server will trigger 408 status error, the status code I used in this project to label timeout and unreachable issues.
 
 ## Notes
 
